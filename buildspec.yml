@@ -1,0 +1,35 @@
+version: 0.2
+
+phases:
+  install:
+    runtime-versions:
+      python: 3.9
+    commands:
+      - echo "Installing Terraform..."
+      - curl -o terraform.zip https://releases.hashicorp.com/terraform/1.9.5/terraform_1.9.5_linux_amd64.zip
+      - unzip terraform.zip
+      - mv terraform /usr/local/bin/
+      - terraform -version
+
+  pre_build:
+    commands:
+      - echo "Initializing Terraform..."
+      - terraform init -backend-config="bucket=$TF_STATE_BUCKET" \
+                       -backend-config="key=project1/terraform.tfstate" \
+                       -backend-config="region=$AWS_REGION" \
+                       -backend-config="dynamodb_table=terraform-locks"
+
+  build:
+    commands:
+      - echo "Running terraform plan..."
+      - terraform validate
+      - terraform plan -out=tfplan
+
+  post_build:
+    commands:
+      - echo "Applying Terraform..."
+      - terraform apply -auto-approve tfplan
+
+artifacts:
+  files:
+    - '**/*'
